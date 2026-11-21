@@ -1,12 +1,30 @@
-// טעינת נתונים מ-localStorage
-let tasks = JSON.parse(localStorage.getItem('tasks') || '[]');
-let ideas = JSON.parse(localStorage.getItem('ideas') || '[]');
+// === נתונים התחלתיים (מסונכרנים מהצ'אט עם Grok) ===
+const INITIAL_IDEAS = [
+  {
+    id: 1,
+    text: "גיגית מחשבות כמו של דמבלדור, אבל עם דגש על ביצוע – לא רק לשמור רעיונות אלא לדחוף אותם לביצוע בפועל",
+    status: "progress" // new | progress | execution | done
+  }
+];
 
-// הצגה ראשונית
+const INITIAL_TASKS = [];
+
+// טעינה
+let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;
+let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
+
+// אם אין כלום ב-localStorage, נשמור את ההתחלתיים
+if (!localStorage.getItem('ideas')) {
+  localStorage.setItem('ideas', JSON.stringify(ideas));
+}
+if (!localStorage.getItem('tasks')) {
+  localStorage.setItem('tasks', JSON.stringify(tasks));
+}
+
 renderTasks();
 renderIdeas();
 
-// משימות
+// === משימות ===
 function addTask() {
   const input = document.getElementById('taskInput');
   const text = input.value.trim();
@@ -38,9 +56,11 @@ function renderTasks() {
   const list = document.getElementById('taskList');
   list.innerHTML = tasks.map(task => `
     <li class="${task.done ? 'done' : ''}">
-      <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${task.id})">
-      <span>${escapeHtml(task.text)}</span>
-      <button class="delete-btn" onclick="deleteTask(${task.id})">מחק</button>
+      <div class="idea-header">
+        <input type="checkbox" ${task.done ? 'checked' : ''} onchange="toggleTask(${task.id})">
+        <span>${escapeHtml(task.text)}</span>
+        <button class="delete-btn" onclick="deleteTask(${task.id})">מחק</button>
+      </div>
     </li>
   `).join('');
 }
@@ -49,17 +69,26 @@ function saveTasks() {
   localStorage.setItem('tasks', JSON.stringify(tasks));
 }
 
-// רעיונות
+// === רעיונות ===
 function addIdea() {
   const input = document.getElementById('ideaInput');
   const text = input.value.trim();
   if (!text) return;
 
-  ideas.push({ id: Date.now(), text });
+  ideas.unshift({ id: Date.now(), text, status: 'new' });
   saveIdeas();
   renderIdeas();
   input.value = '';
   input.focus();
+}
+
+function updateIdeaStatus(id, status) {
+  const idea = ideas.find(i => i.id === id);
+  if (idea) {
+    idea.status = status;
+    saveIdeas();
+    renderIdeas();
+  }
 }
 
 function deleteIdea(id) {
@@ -68,12 +97,30 @@ function deleteIdea(id) {
   renderIdeas();
 }
 
+function getStatusLabel(status) {
+  const map = {
+    new: 'חדש',
+    progress: 'בטיפול',
+    execution: 'בביצוע',
+    done: 'הושלם'
+  };
+  return map[status] || status;
+}
+
 function renderIdeas() {
   const list = document.getElementById('ideaList');
   list.innerHTML = ideas.map(idea => `
     <li>
-      <span>${escapeHtml(idea.text)}</span>
-      <button class="delete-btn" onclick="deleteIdea(${idea.id})">מחק</button>
+      <div class="idea-header">
+        <span class="status status-${idea.status}">${getStatusLabel(idea.status)}</span>
+        <span>${escapeHtml(idea.text)}</span>
+      </div>
+      <div class="actions">
+        <button class="action-btn" onclick="updateIdeaStatus(${idea.id}, 'progress')">בטיפול</button>
+        <button class="action-btn" onclick="updateIdeaStatus(${idea.id}, 'execution')">בביצוע</button>
+        <button class="action-btn" onclick="updateIdeaStatus(${idea.id}, 'done')">הושלם</button>
+        <button class="delete-btn" onclick="deleteIdea(${idea.id})">מחק</button>
+      </div>
     </li>
   `).join('');
 }

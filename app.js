@@ -1,13 +1,24 @@
 // === נתונים התחלתיים (מסונכרנים מהצ'אט עם Grok) ===
 const INITIAL_IDEAS = [
   {
+    id: 2,
+    text: "אפליקציה לילדים (גילאי 11, 9, 4) שמלמדת ידע כללי + ידע ישראלי + מושגי יסוד במתמטיקה וחיים. הומוריסטי, מותאם גיל, ונשלח למכשיר הנייד",
+    status: "new"
+  },
+  {
     id: 1,
     text: "גיגית מחשבות כמו של דמבלדור, אבל עם דגש על ביצוע – לא רק לשמור רעיונות אלא לדחוף אותם לביצוע בפועל",
-    status: "progress" // new | progress | execution | done
+    status: "progress"
   }
 ];
 
-const INITIAL_TASKS = [];
+const INITIAL_TASKS = [
+  {
+    id: 100,
+    text: "להקים WhatsApp Business ולחבר אותו ל-Zapier",
+    done: false
+  }
+];
 
 // טעינה
 let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;

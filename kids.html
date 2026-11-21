@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>לומדים עם אבא - גרסה ראשונה</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+    .container { max-width: 700px; margin: 0 auto; padding: 1.5rem; }
+    h1 { text-align: center; margin-bottom: 0.5rem; }
+    .subtitle { text-align: center; color: #94a3b8; margin-bottom: 2rem; }
+    .age-select { display: flex; gap: 1rem; justify-content: center; margin-bottom: 2rem; flex-wrap: wrap; }
+    .age-btn { padding: 1rem 1.5rem; border-radius: 12px; border: 2px solid #334155; background: #1e293b; color: white; font-size: 1.1rem; cursor: pointer; }
+    .age-btn.active { border-color: #3b82f6; background: #1e40af; }
+    .quiz { background: #1e293b; border-radius: 16px; padding: 1.5rem; border: 1px solid #334155; }
+    .question { font-size: 1.3rem; margin-bottom: 1.5rem; line-height: 1.5; }
+    .options { display: flex; flex-direction: column; gap: 0.75rem; }
+    .option { padding: 1rem; border-radius: 10px; background: #0f172a; border: 1px solid #475569; cursor: pointer; text-align: right; }
+    .option:hover { border-color: #3b82f6; }
+    .option.correct { background: #065f46; border-color: #10b981; }
+    .option.wrong { background: #7f1d1d; border-color: #ef4444; }
+    .feedback { margin-top: 1rem; font-weight: 600; min-height: 1.5rem; }
+    .next-btn { margin-top: 1.5rem; padding: 0.75rem 1.5rem; background: #3b82f6; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; }
+    .score { text-align: center; margin-top: 1rem; color: #94a3b8; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>לומדים עם אבא</h1>
+    <p class="subtitle">גרסה ראשונה - בחר גיל והתחל</p>
+
+    <div class="age-select">
+      <button class="age-btn" data-age="4">גיל 4</button>
+      <button class="age-btn" data-age="9">גיל 9</button>
+      <button class="age-btn" data-age="11">גיל 11</button>
+    </div>
+
+    <div class="quiz" id="quiz" style="display:none;">
+      <div class="question" id="question"></div>
+      <div class="options" id="options"></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next-btn" id="nextBtn" style="display:none;">שאלה הבאה</button>
+      <div class="score" id="score"></div>
+    </div>
+  </div>
+
+  <script>
+    const quizzes = {
+      4: [
+        { q: "מה הצבע של דגל ישראל?", options: ["אדום ולבן", "כחול ולבן", "ירוק ולבן", "צהוב וכחול"], correct: 1, explain: "הדגל של ישראל הוא כחול ולבן עם מגן דוד!" },
+        { q: "כמה רגליים יש לכלב?", options: ["2", "3", "4", "6"], correct: 2, explain: "לכלב יש 4 רגליים." },
+        { q: "באיזה חג מדליקים חנוכיה?", options: ["פסח", "חנוכה", "סוכות", "פורים"], correct: 1, explain: "בחנוכה מדליקים חנוכיה!" }
+      ],
+      9: [
+        { q: "מהי בירת ישראל?", options: ["תל אביב", "חיפה", "ירושלים", "באר שבע"], correct: 2, explain: "ירושלים היא בירת ישראל." },
+        { q: "כמה זה 7 × 8?", options: ["54", "56", "63", "64"], correct: 1, explain: "7 × 8 = 56" },
+        { q: "מהי ההמצאה הישראלית שחוסכת מים בחקלאות?", options: ["ווייז", "השקיה בטפטוף", "מוביל", "כיפת ברזל"], correct: 1, explain: "השקיה בטפטוף היא המצאה ישראלית חשובה." }
+      ],
+      11: [
+        { q: "באיזו שנה הוקמה מדינת ישראל?", options: ["1945", "1947", "1948", "1950"], correct: 2, explain: "מדינת ישראל הוקמה בשנת 1948." },
+        { q: "מי היה ראש הממשלה הראשון של ישראל?", options: ["בן גוריון", "בגין", "רבין", "גולדה מאיר"], correct: 0, explain: "דוד בן גוריון היה ראש הממשלה הראשון." },
+        { q: "מה זה אחוז?", options: ["חלק מ-10", "חלק מ-100", "חלק מ-1000", "חלק מ-1"], correct: 1, explain: "אחוז הוא חלק מ-100." }
+      ]
+    };
+
+    let currentAge = null;
+    let currentQ = 0;
+    let score = 0;
+
+    document.querySelectorAll('.age-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentAge = btn.dataset.age;
+        currentQ = 0;
+        score = 0;
+        document.getElementById('quiz').style.display = 'block';
+        showQuestion();
+      });
+    });
+
+    function showQuestion() {
+      const quiz = quizzes[currentAge];
+      if (currentQ >= quiz.length) {
+        document.getElementById('question').textContent = `סיימת! ציון: ${score} מתוך ${quiz.length}`;
+        document.getElementById('options').innerHTML = '';
+        document.getElementById('feedback').textContent = '';
+        document.getElementById('nextBtn').style.display = 'none';
+        document.getElementById('score').textContent = 'כל הכבוד!';
+        return;
+      }
+      const q = quiz[currentQ];
+      document.getElementById('question').textContent = q.q;
+      document.getElementById('options').innerHTML = q.options.map((opt, i) => 
+        `<div class="option" data-index="${i}">${opt}</div>`
+      ).join('');
+      document.getElementById('feedback').textContent = '';
+      document.getElementById('nextBtn').style.display = 'none';
+      document.getElementById('score').textContent = `שאלה ${currentQ + 1} מתוך ${quiz.length}`;
+
+      document.querySelectorAll('.option').forEach(opt => {
+        opt.addEventListener('click', () => {
+          const idx = parseInt(opt.dataset.index);
+          document.querySelectorAll('.option').forEach(o => o.style.pointerEvents = 'none');
+          if (idx === q.correct) {
+            opt.classList.add('correct');
+            document.getElementById('feedback').textContent = 'נכון! ' + q.explain;
+            score++;
+          } else {
+            opt.classList.add('wrong');
+            document.querySelectorAll('.option')[q.correct].classList.add('correct');
+            document.getElementById('feedback').textContent = 'לא נכון. ' + q.explain;
+          }
+          document.getElementById('nextBtn').style.display = 'block';
+        });
+      });
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      currentQ++;
+      showQuestion();
+    });
+  </script>
+</body>
+</html>

@@ -47,7 +47,6 @@ let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS
 let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
 let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INITIAL_CONTAINERS;
 
-// ודא שלכל מכולה יש note
 containers.forEach(c => { if (c.note === undefined) c.note = ''; });
 
 if (containers.length === 0) {
@@ -227,6 +226,7 @@ function updateNote(id, value) {
   if (c) {
     c.note = value;
     saveContainers();
+    renderContainers();
   }
 }
 
@@ -238,14 +238,15 @@ function renderContainers() {
         <strong>${escapeHtml(c.company)}</strong> — ${escapeHtml(c.number)}
         <button class="delete-btn" onclick="deleteContainer(${c.id})">מחק</button>
       </div>
-      <div style="margin: 0.4rem 0;">
+      ${c.note ? `<div style="font-weight: 600; color: #38bdf8; margin: 0.35rem 0 0.2rem; font-size: 1rem;">📝 ${escapeHtml(c.note)}</div>` : ''}
+      <div style="margin: 0.3rem 0 0.5rem;">
         <input type="text" 
           value="${escapeHtml(c.note || '')}" 
-          placeholder="הערה / זיהוי המשלוח (למשל: לקוח X / הזמנה 123)"
+          placeholder="הוסף הערה / זיהוי למשלוח..."
           onchange="updateNote(${c.id}, this.value)"
           style="width: 100%; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #f8fafc; font-size: 0.9rem;">
       </div>
-      <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.3rem; line-height: 1.5;">
+      <div style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.5;">
         <strong>סטטוס:</strong> ${escapeHtml(c.status || 'לא ידוע')}<br>
         <strong>מועד געה משוער לאשדוד:</strong> ${escapeHtml(c.eta || 'לא ידוע')}<br>
         ${c.vessel ? `<strong>אונייה:</strong> ${escapeHtml(c.vessel)}<br>` : ''}

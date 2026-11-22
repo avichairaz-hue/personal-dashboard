@@ -127,6 +127,16 @@ function renderIdeas() {
 function saveIdeas() { localStorage.setItem('ideas', JSON.stringify(ideas)); }
 
 // === מכולות ===
+const trackingUrls = {
+  'OOCL': 'https://www.oocl.com/eng/ourservices/eservices/cargotracking/Pages/cargotracking.aspx',
+  'MAERSK': 'https://www.maersk.com/tracking',
+  'MSC': 'https://www.msc.com/en/track-a-shipment',
+  'ZIM': 'https://www.zim.com/tools/track-a-shipment',
+  'YANG MING': 'https://www.yangming.com/e-service/Track_Trace/track_trace_cargo_tracking.aspx',
+  'GREEN': 'https://www.greencarrier.com',
+  'ONE': 'https://www.one-line.com/en/track-trace'
+};
+
 function addContainer() {
   const company = document.getElementById('companyInput').value.trim();
   const number = document.getElementById('containerInput').value.trim();
@@ -151,6 +161,22 @@ function deleteContainer(id) {
   renderContainers();
 }
 
+function manualCheckAll() {
+  if (containers.length === 0) return alert('אין מכולות לבדיקה');
+  containers.forEach(c => {
+    c.status = 'בבדיקה...';
+    c.lastCheck = new Date().toLocaleString('he-IL');
+  });
+  saveContainers();
+  renderContainers();
+  alert('הבדיקה היזומה הופעלה. האוטומציה תבדוק בקרוב ותעדכן את הסטטוס.\nבנתיים ניתן לפתוח את אתרי המעקב ביד.');
+  // Open tracking pages
+  containers.forEach(c => {
+    const url = trackingUrls[c.company];
+    if (url) window.open(url, '_blank');
+  });
+}
+
 function renderContainers() {
   const list = document.getElementById('containerList');
   list.innerHTML = containers.map(c => `
@@ -161,7 +187,8 @@ function renderContainers() {
       </div>
       <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.3rem;">
         סטטוס: ${escapeHtml(c.status)}<br>
-        מועד געה משוער לאשדוד: ${escapeHtml(c.eta)}
+        מועד געה משוער לאשדוד: ${escapeHtml(c.eta)}<br>
+        ${c.lastCheck ? `בדיקה אחרונה: ${escapeHtml(c.lastCheck)}` : ''}
       </div>
     </li>
   `).join('');

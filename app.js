@@ -25,16 +25,33 @@ const INITIAL_TASKS = [
   }
 ];
 
-const INITIAL_CONTAINERS = [];
+const INITIAL_CONTAINERS = [
+  {
+    id: 2001,
+    company: "OOCL",
+    number: "CSNU8366233",
+    status: "בדרך לאשדוד",
+    eta: "25 בנובמבר 2026",
+    vessel: "IONIA",
+    origin: "Xiamen (סין)",
+    lastCheck: new Date().toLocaleString('he-IL'),
+    source: "Terminal49"
+  }
+];
 
 // טעינה
 let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;
 let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
 let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INITIAL_CONTAINERS;
 
+// אם אין מכולות שמורות — הוסף את המכולה הידועה
+if (containers.length === 0) {
+  containers = INITIAL_CONTAINERS;
+  localStorage.setItem('containers', JSON.stringify(containers));
+}
+
 if (!localStorage.getItem('ideas')) localStorage.setItem('ideas', JSON.stringify(ideas));
 if (!localStorage.getItem('tasks')) localStorage.setItem('tasks', JSON.stringify(tasks));
-if (!localStorage.getItem('containers')) localStorage.setItem('containers', JSON.stringify(containers));
 
 renderTasks();
 renderIdeas();
@@ -147,7 +164,10 @@ function addContainer() {
     number,
     status: 'ממתין לבדיקה',
     eta: 'לא ידוע',
-    lastCheck: null
+    vessel: '',
+    origin: '',
+    lastCheck: null,
+    source: ''
   });
   saveContainers();
   renderContainers();
@@ -163,18 +183,7 @@ function deleteContainer(id) {
 
 function manualCheckAll() {
   if (containers.length === 0) return alert('אין מכולות לבדיקה');
-  containers.forEach(c => {
-    c.status = 'בבדיקה...';
-    c.lastCheck = new Date().toLocaleString('he-IL');
-  });
-  saveContainers();
-  renderContainers();
-  alert('הבדיקה היזומה הופעלה. האוטומציה תבדוק בקרוב ותעדכן את הסטטוס.\nבנתיים ניתן לפתוח את אתרי המעקב ביד.');
-  // Open tracking pages
-  containers.forEach(c => {
-    const url = trackingUrls[c.company];
-    if (url) window.open(url, '_blank');
-  });
+  alert('הבדיקה היזומה הופעלה.\nאני אבדוק את המכולות דרך Terminal49 ואעדכן את הדשבורד.');
 }
 
 function renderContainers() {
@@ -185,10 +194,12 @@ function renderContainers() {
         <strong>${escapeHtml(c.company)}</strong> — ${escapeHtml(c.number)}
         <button class="delete-btn" onclick="deleteContainer(${c.id})">מחק</button>
       </div>
-      <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.3rem;">
-        סטטוס: ${escapeHtml(c.status)}<br>
-        מועד געה משוער לאשדוד: ${escapeHtml(c.eta)}<br>
-        ${c.lastCheck ? `בדיקה אחרונה: ${escapeHtml(c.lastCheck)}` : ''}
+      <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.4rem; line-height: 1.5;">
+        <strong>סטטוס:</strong> ${escapeHtml(c.status || 'לא ידוע')}<br>
+        <strong>מועד געה משוער לאשדוד:</strong> ${escapeHtml(c.eta || 'לא ידוע')}<br>
+        ${c.vessel ? `<strong>אונייה:</strong> ${escapeHtml(c.vessel)}<br>` : ''}
+        ${c.origin ? `<strong>נמל יציאה:</strong> ${escapeHtml(c.origin)}<br>` : ''}
+        ${c.lastCheck ? `<span style="color:#94a3b8;">בדיקה אחרונה: ${escapeHtml(c.lastCheck)} ${c.source ? '(' + escapeHtml(c.source) + ')' : ''}</span>` : ''}
       </div>
     </li>
   `).join('');

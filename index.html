@@ -39,7 +39,16 @@
     <section class="card" style="margin-top: 1.5rem;">
       <h2>מעקב משלוחים ימיים (נמל אשדוד)</h2>
       <div class="input-row">
-        <input type="text" id="companyInput" placeholder="חברת ספנות (Maersk, MSC, ZIM...)">
+        <select id="companyInput" style="flex: 1; padding: 0.65rem 0.9rem; border-radius: 8px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-size: 0.95rem;">
+          <option value="">בחר חברת ספנות</option>
+          <option value="OOCL">OOCL</option>
+          <option value="MAERSK">MAERSK</option>
+          <option value="MSC">MSC</option>
+          <option value="ZIM">ZIM</option>
+          <option value="YANG MING">YANG MING</option>
+          <option value="GREEN">GREEN</option>
+          <option value="ONE">ONE</option>
+        </select>
         <input type="text" id="containerInput" placeholder="מספר מכולה">
         <button onclick="addContainer()">הוסף מכולה</button>
       </div>

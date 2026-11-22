@@ -10,7 +10,7 @@
   <div class="container">
     <header>
       <h1>הדשבורד שלי</h1>
-      <p class="subtitle">גיגית מחשבות + ביצוע</p>
+      <p class="subtitle">גיגית מחשבות + משלוחים + ביצוע</p>
     </header>
 
     <div class="grid">
@@ -35,8 +35,20 @@
       </section>
     </div>
 
+    <!-- משלוחים ימיים -->
+    <section class="card" style="margin-top: 1.5rem;">
+      <h2>מעקב משלוחים ימיים (נמל אשדוד)</h2>
+      <div class="input-row">
+        <input type="text" id="companyInput" placeholder="חברת ספנות (Maersk, MSC, ZIM...)">
+        <input type="text" id="containerInput" placeholder="מספר מכולה">
+        <button onclick="addContainer()">הוסף מכולה</button>
+      </div>
+      <ul id="containerList" class="list"></ul>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 1rem;">בדיקה אוטומטית 3 פעמים ביום. סטטוס מתעדכן לאחר בדיקה.</p>
+    </section>
+
     <footer>
-      <p>נוצר עם Grok · רעיונות מסונכרנים מהצ'אט</p>
+      <p>נוצר עם Grok · רעיונות ומשלוחים מסונכרנים מהצ'אט</p>
     </footer>
   </div>
 

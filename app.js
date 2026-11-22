@@ -1,4 +1,4 @@
-// === נתונים התחלתיים (מסונכרנים מהצ'אט עם Grok) ===
+// === נתונים התחלתיים ===
 const INITIAL_IDEAS = [
   {
     id: 3,
@@ -25,27 +25,26 @@ const INITIAL_TASKS = [
   }
 ];
 
+const INITIAL_CONTAINERS = [];
+
 // טעינה
 let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;
 let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
+let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INITIAL_CONTAINERS;
 
-// אם אין כלום ב-localStorage, נשמור את ההתחלתיים
-if (!localStorage.getItem('ideas')) {
-  localStorage.setItem('ideas', JSON.stringify(ideas));
-}
-if (!localStorage.getItem('tasks')) {
-  localStorage.setItem('tasks', JSON.stringify(tasks));
-}
+if (!localStorage.getItem('ideas')) localStorage.setItem('ideas', JSON.stringify(ideas));
+if (!localStorage.getItem('tasks')) localStorage.setItem('tasks', JSON.stringify(tasks));
+if (!localStorage.getItem('containers')) localStorage.setItem('containers', JSON.stringify(containers));
 
 renderTasks();
 renderIdeas();
+renderContainers();
 
 // === משימות ===
 function addTask() {
   const input = document.getElementById('taskInput');
   const text = input.value.trim();
   if (!text) return;
-
   tasks.push({ id: Date.now(), text, done: false });
   saveTasks();
   renderTasks();
@@ -55,11 +54,7 @@ function addTask() {
 
 function toggleTask(id) {
   const task = tasks.find(t => t.id === id);
-  if (task) {
-    task.done = !task.done;
-    saveTasks();
-    renderTasks();
-  }
+  if (task) { task.done = !task.done; saveTasks(); renderTasks(); }
 }
 
 function deleteTask(id) {
@@ -81,16 +76,13 @@ function renderTasks() {
   `).join('');
 }
 
-function saveTasks() {
-  localStorage.setItem('tasks', JSON.stringify(tasks));
-}
+function saveTasks() { localStorage.setItem('tasks', JSON.stringify(tasks)); }
 
 // === רעיונות ===
 function addIdea() {
   const input = document.getElementById('ideaInput');
   const text = input.value.trim();
   if (!text) return;
-
   ideas.unshift({ id: Date.now(), text, status: 'new' });
   saveIdeas();
   renderIdeas();
@@ -100,11 +92,7 @@ function addIdea() {
 
 function updateIdeaStatus(id, status) {
   const idea = ideas.find(i => i.id === id);
-  if (idea) {
-    idea.status = status;
-    saveIdeas();
-    renderIdeas();
-  }
+  if (idea) { idea.status = status; saveIdeas(); renderIdeas(); }
 }
 
 function deleteIdea(id) {
@@ -114,12 +102,7 @@ function deleteIdea(id) {
 }
 
 function getStatusLabel(status) {
-  const map = {
-    new: 'חדש',
-    progress: 'בטיפול',
-    execution: 'בביצוע',
-    done: 'הושלם'
-  };
+  const map = { new: 'חדש', progress: 'בטיפול', execution: 'בביצוע', done: 'הושלם' };
   return map[status] || status;
 }
 
@@ -141,9 +124,50 @@ function renderIdeas() {
   `).join('');
 }
 
-function saveIdeas() {
-  localStorage.setItem('ideas', JSON.stringify(ideas));
+function saveIdeas() { localStorage.setItem('ideas', JSON.stringify(ideas)); }
+
+// === מכולות ===
+function addContainer() {
+  const company = document.getElementById('companyInput').value.trim();
+  const number = document.getElementById('containerInput').value.trim();
+  if (!company || !number) return alert('הזן חברת ספנות ומספר מכולה');
+  containers.unshift({
+    id: Date.now(),
+    company,
+    number,
+    status: 'ממתין לבדיקה',
+    eta: 'לא ידוע',
+    lastCheck: null
+  });
+  saveContainers();
+  renderContainers();
+  document.getElementById('companyInput').value = '';
+  document.getElementById('containerInput').value = '';
 }
+
+function deleteContainer(id) {
+  containers = containers.filter(c => c.id !== id);
+  saveContainers();
+  renderContainers();
+}
+
+function renderContainers() {
+  const list = document.getElementById('containerList');
+  list.innerHTML = containers.map(c => `
+    <li>
+      <div class="idea-header">
+        <strong>${escapeHtml(c.company)}</strong> — ${escapeHtml(c.number)}
+        <button class="delete-btn" onclick="deleteContainer(${c.id})">מחק</button>
+      </div>
+      <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.3rem;">
+        סטטוס: ${escapeHtml(c.status)}<br>
+        מועד געה משוער לאשדוד: ${escapeHtml(c.eta)}
+      </div>
+    </li>
+  `).join('');
+}
+
+function saveContainers() { localStorage.setItem('containers', JSON.stringify(containers)); }
 
 // עזר
 function escapeHtml(text) {
@@ -152,10 +176,7 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Enter key
-document.getElementById('taskInput').addEventListener('keypress', e => {
-  if (e.key === 'Enter') addTask();
-});
-document.getElementById('ideaInput').addEventListener('keypress', e => {
-  if (e.key === 'Enter') addIdea();
-});
+// Enter keys
+document.getElementById('taskInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') addTask(); });
+document.getElementById('ideaInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') addIdea(); });
+document.getElementById('containerInput')?.addEventListener('keypress', e => { if (e.key === 'Enter') addContainer(); });

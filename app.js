@@ -46,6 +46,8 @@ const TRACKING_API = 'https://terminal49-api-key-request.vercel.app/api/track';
 let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;
 let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
 let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INITIAL_CONTAINERS;
+let whatsappMessages = JSON.parse(localStorage.getItem('whatsappMessages') || '[]');
+let spamList = JSON.parse(localStorage.getItem('spamList') || '[]');
 
 containers.forEach(c => { if (c.note === undefined) c.note = ''; });
 
@@ -60,6 +62,7 @@ if (!localStorage.getItem('tasks')) localStorage.setItem('tasks', JSON.stringify
 renderTasks();
 renderIdeas();
 renderContainers();
+renderWhatsapp();
 
 // === משימות ===
 function addTask() {
@@ -146,6 +149,93 @@ function renderIdeas() {
 }
 
 function saveIdeas() { localStorage.setItem('ideas', JSON.stringify(ideas)); }
+
+// === WhatsApp ===
+function isSpam(msg) {
+  const text = (msg.text || '').toLowerCase();
+  const from = (msg.from || '').toLowerCase();
+  return spamList.some(s => 
+    text.includes(s.toLowerCase()) || from.includes(s.toLowerCase())
+  );
+}
+
+function markSpam(id) {
+  const msg = whatsappMessages.find(m => m.id === id);
+  if (!msg) return;
+  const keyword = prompt('הזן מילת מפתח או שם שולח לסינון עתידי (SPAM):', msg.from || msg.text?.slice(0, 30) || '');
+  if (keyword && keyword.trim()) {
+    spamList.push(keyword.trim());
+    localStorage.setItem('spamList', JSON.stringify(spamList));
+    whatsappMessages = whatsappMessages.filter(m => m.id !== id);
+    localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
+    renderWhatsapp();
+  }
+}
+
+function dismissWhatsapp(id) {
+  whatsappMessages = whatsappMessages.filter(m => m.id !== id);
+  localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
+  renderWhatsapp();
+}
+
+function convertToTask(id) {
+  const msg = whatsappMessages.find(m => m.id === id);
+  if (!msg) return;
+  const text = `💬 WhatsApp מ-${msg.from || 'לא ידוע'}: ${msg.text || ''}`;
+  tasks.unshift({ id: Date.now(), text, done: false });
+  saveTasks();
+  renderTasks();
+  dismissWhatsapp(id);
+}
+
+function clearSpam() {
+  if (confirm('לנקות את רשימת ה-SPAM?')) {
+    spamList = [];
+    localStorage.setItem('spamList', JSON.stringify(spamList));
+    renderWhatsapp();
+  }
+}
+
+function renderWhatsapp() {
+  const list = document.getElementById('whatsappList');
+  const filtered = whatsappMessages.filter(m => !isSpam(m));
+  document.getElementById('spamCount').textContent = spamList.length;
+
+  if (filtered.length === 0) {
+    list.innerHTML = '<li style="color:#94a3b8; font-size:0.9rem;">אין הודעות חדשות</li>';
+    return;
+  }
+
+  list.innerHTML = filtered.map(m => `
+    <li>
+      <div class="idea-header">
+        <strong>${escapeHtml(m.from || 'לא ידוע')}</strong>
+        <span style="font-size:0.75rem; color:#94a3b8;">${m.time || ''}</span>
+      </div>
+      <div style="margin: 0.3rem 0; font-size:0.95rem;">${escapeHtml(m.text || '')}</div>
+      <div class="actions">
+        <button class="action-btn" onclick="convertToTask(${m.id})">הפוך למשימה</button>
+        <button class="action-btn" style="background:#f59e0b;" onclick="markSpam(${m.id})">סמן כ-SPAM</button>
+        <button class="delete-btn" onclick="dismissWhatsapp(${m.id})">התעלם</button>
+      </div>
+    </li>
+  `).join('');
+}
+
+// פונקציה להוספת הודעה חדשה (תיקרא מבחוץ או מ-Zapier בעתיד)
+function addWhatsappMessage(from, text) {
+  const msg = {
+    id: Date.now(),
+    from,
+    text,
+    time: new Date().toLocaleString('he-IL')
+  };
+  if (!isSpam(msg)) {
+    whatsappMessages.unshift(msg);
+    localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
+    renderWhatsapp();
+  }
+}
 
 // === מכולות ===
 async function checkContainer(container) {

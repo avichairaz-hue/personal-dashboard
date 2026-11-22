@@ -39,6 +39,8 @@ const INITIAL_CONTAINERS = [
   }
 ];
 
+const TRACKING_API = 'https://terminal49-api-key-request.vercel.app/api/track';
+
 // טעינה
 let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;
 let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
@@ -143,26 +145,48 @@ function renderIdeas() {
 function saveIdeas() { localStorage.setItem('ideas', JSON.stringify(ideas)); }
 
 // === מכולות ===
-const trackingUrls = {
-  'OOCL': 'https://www.oocl.com/eng/ourservices/eservices/cargotracking/Pages/cargotracking.aspx',
-  'MAERSK': 'https://www.maersk.com/tracking',
-  'MSC': 'https://www.msc.com/en/track-a-shipment',
-  'ZIM': 'https://www.zim.com/tools/track-a-shipment',
-  'YANG MING': 'https://www.yangming.com/e-service/Track_Trace/track_trace_cargo_tracking.aspx',
-  'GREEN': 'https://www.greencarrier.com',
-  'ONE': 'https://www.one-line.com/en/track-trace',
-  'HAPAG LLOYD': 'https://www.hapag-lloyd.com/solutions/tracking/'
-};
+async function checkContainer(container) {
+  try {
+    const url = `${TRACKING_API}?number=${encodeURIComponent(container.number)}&company=${encodeURIComponent(container.company)}`;
+    const res = await fetch(url);
+    const data = await res.json();
 
-const scacMap = {
-  'OOCL': 'OOLU',
-  'MAERSK': 'MAEU',
-  'MSC': 'MSCU',
-  'ZIM': 'ZIMU',
-  'YANG MING': 'YMLU',
-  'ONE': 'ONEY',
-  'HAPAG LLOYD': 'HLCU'
-};
+    if (data.shipment) {
+      container.status = data.shipment.destination === 'Ashdod' ? 'בדרך לאשדוד' : (data.status || 'במעקב');
+      container.eta = data.shipment.etaAt ? new Date(data.shipment.etaAt).toLocaleDateString('he-IL') : 'לא ידוע';
+      container.vessel = data.shipment.vessel || '';
+      container.origin = data.shipment.origin || '';
+      container.source = 'Terminal49';
+    } else {
+      container.status = data.status || 'לא זמין';
+    }
+    container.lastCheck = new Date().toLocaleString('he-IL');
+  } catch (e) {
+    container.status = 'שגיאה בבדיקה';
+    container.lastCheck = new Date().toLocaleString('he-IL');
+  }
+}
+
+async function manualCheckAll() {
+  if (containers.length === 0) return alert('אין מכולות לבדיקה');
+  
+  const btn = document.querySelector('button[onclick="manualCheckAll()"]');
+  if (btn) btn.textContent = 'בודק...';
+  
+  for (const c of containers) {
+    c.status = 'בבדיקה...';
+  }
+  renderContainers();
+
+  for (const c of containers) {
+    await checkContainer(c);
+    saveContainers();
+    renderContainers();
+  }
+
+  if (btn) btn.textContent = 'בדוק עכשיו את כל המכולות';
+  alert('הבדיקה הסתיימה');
+}
 
 function addContainer() {
   const company = document.getElementById('companyInput').value.trim();
@@ -189,11 +213,6 @@ function deleteContainer(id) {
   containers = containers.filter(c => c.id !== id);
   saveContainers();
   renderContainers();
-}
-
-function manualCheckAll() {
-  if (containers.length === 0) return alert('אין מכולות לבדיקה');
-  alert('הבדיקה היזומה הופעלה.\nאני אבדוק את המכולות דרך Terminal49 ואעדכן את הדשבורד.');
 }
 
 function renderContainers() {

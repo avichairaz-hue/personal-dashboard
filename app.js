@@ -44,7 +44,6 @@ let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS
 let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
 let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INITIAL_CONTAINERS;
 
-// אם אין מכולות שמורות — הוסף את המכולה הידועה
 if (containers.length === 0) {
   containers = INITIAL_CONTAINERS;
   localStorage.setItem('containers', JSON.stringify(containers));
@@ -151,7 +150,18 @@ const trackingUrls = {
   'ZIM': 'https://www.zim.com/tools/track-a-shipment',
   'YANG MING': 'https://www.yangming.com/e-service/Track_Trace/track_trace_cargo_tracking.aspx',
   'GREEN': 'https://www.greencarrier.com',
-  'ONE': 'https://www.one-line.com/en/track-trace'
+  'ONE': 'https://www.one-line.com/en/track-trace',
+  'HAPAG LLOYD': 'https://www.hapag-lloyd.com/solutions/tracking/'
+};
+
+const scacMap = {
+  'OOCL': 'OOLU',
+  'MAERSK': 'MAEU',
+  'MSC': 'MSCU',
+  'ZIM': 'ZIMU',
+  'YANG MING': 'YMLU',
+  'ONE': 'ONEY',
+  'HAPAG LLOYD': 'HLCU'
 };
 
 function addContainer() {

@@ -41,6 +41,7 @@ const INITIAL_CONTAINERS = [
 ];
 
 const TRACKING_API = 'https://terminal49-api-key-request.vercel.app/api/track';
+const WHATSAPP_API = 'https://terminal49-api-key-request.vercel.app/api/whatsapp';
 
 // טעינה
 let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;
@@ -196,6 +197,26 @@ function clearSpam() {
   }
 }
 
+async function fetchWhatsappMessages() {
+  const btn = document.getElementById('fetchWhatsappBtn');
+  if (btn) btn.textContent = 'בודק...';
+  try {
+    const res = await fetch(WHATSAPP_API);
+    const data = await res.json();
+    if (data.messages && Array.isArray(data.messages)) {
+      data.messages.forEach(m => {
+        if (!whatsappMessages.some(existing => existing.from === m.from && existing.text === m.text)) {
+          addWhatsappMessage(m.from, m.text);
+        }
+      });
+    }
+  } catch (e) {
+    console.error(e);
+    alert('לא הצלחתי למשוך הודעות. ודא שה-endpoint מעודכן.');
+  }
+  if (btn) btn.textContent = 'בדוק הודעות חדשות';
+}
+
 function renderWhatsapp() {
   const list = document.getElementById('whatsappList');
   const filtered = whatsappMessages.filter(m => !isSpam(m));
@@ -222,7 +243,6 @@ function renderWhatsapp() {
   `).join('');
 }
 
-// פונקציה להוספת הודעה חדשה (תיקרא מבחוץ או מ-Zapier בעתיד)
 function addWhatsappMessage(from, text) {
   const msg = {
     id: Date.now(),

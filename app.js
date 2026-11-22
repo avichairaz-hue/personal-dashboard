@@ -49,6 +49,7 @@ let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS
 let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INITIAL_CONTAINERS;
 let whatsappMessages = JSON.parse(localStorage.getItem('whatsappMessages') || '[]');
 let spamList = JSON.parse(localStorage.getItem('spamList') || '[]');
+let importantSenders = JSON.parse(localStorage.getItem('importantSenders') || '[]');
 
 containers.forEach(c => { if (c.note === undefined) c.note = ''; });
 
@@ -64,6 +65,11 @@ renderTasks();
 renderIdeas();
 renderContainers();
 renderWhatsapp();
+
+// בדיקה אוטומטית כל 2 דקות
+setInterval(fetchWhatsappMessages, 2 * 60 * 1000);
+// בדיקה ראשונה אחרי טעינה
+setTimeout(fetchWhatsappMessages, 3000);
 
 // === משימות ===
 function addTask() {
@@ -160,6 +166,11 @@ function isSpam(msg) {
   );
 }
 
+function isImportant(msg) {
+  const from = (msg.from || '').toLowerCase();
+  return importantSenders.some(s => from.includes(s.toLowerCase()));
+}
+
 function markSpam(id) {
   const msg = whatsappMessages.find(m => m.id === id);
   if (!msg) return;
@@ -182,6 +193,11 @@ function dismissWhatsapp(id) {
 function convertToTask(id) {
   const msg = whatsappMessages.find(m => m.id === id);
   if (!msg) return;
+  // למד שהשולח חשוב
+  if (msg.from && !importantSenders.includes(msg.from)) {
+    importantSenders.push(msg.from);
+    localStorage.setItem('importantSenders', JSON.stringify(importantSenders));
+  }
   const text = `💬 WhatsApp מ-${msg.from || 'לא ידוע'}: ${msg.text || ''}`;
   tasks.unshift({ id: Date.now(), text, done: false });
   saveTasks();
@@ -198,23 +214,28 @@ function clearSpam() {
 }
 
 async function fetchWhatsappMessages() {
-  const btn = document.getElementById('fetchWhatsappBtn');
-  if (btn) btn.textContent = 'בודק...';
   try {
     const res = await fetch(WHATSAPP_API);
     const data = await res.json();
     if (data.messages && Array.isArray(data.messages)) {
+      let added = 0;
       data.messages.forEach(m => {
         if (!whatsappMessages.some(existing => existing.from === m.from && existing.text === m.text)) {
-          addWhatsappMessage(m.from, m.text);
+          const msg = { id: Date.now() + Math.random(), from: m.from, text: m.text, time: new Date().toLocaleString('he-IL') };
+          if (!isSpam(msg)) {
+            whatsappMessages.unshift(msg);
+            added++;
+          }
         }
       });
+      if (added > 0) {
+        localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
+        renderWhatsapp();
+      }
     }
   } catch (e) {
-    console.error(e);
-    alert('לא הצלחתי למשוך הודעות. ודא שה-endpoint מעודכן.');
+    console.error('WhatsApp fetch failed', e);
   }
-  if (btn) btn.textContent = 'בדוק הודעות חדשות';
 }
 
 function renderWhatsapp() {
@@ -227,10 +248,13 @@ function renderWhatsapp() {
     return;
   }
 
-  list.innerHTML = filtered.map(m => `
-    <li>
+  list.innerHTML = filtered.map(m => {
+    const important = isImportant(m);
+    return `
+    <li style="${important ? 'border-right: 3px solid #22c55e;' : ''}">
       <div class="idea-header">
         <strong>${escapeHtml(m.from || 'לא ידוע')}</strong>
+        ${important ? '<span style="color:#22c55e; font-size:0.75rem;">★ חשוב</span>' : ''}
         <span style="font-size:0.75rem; color:#94a3b8;">${m.time || ''}</span>
       </div>
       <div style="margin: 0.3rem 0; font-size:0.95rem;">${escapeHtml(m.text || '')}</div>
@@ -239,8 +263,8 @@ function renderWhatsapp() {
         <button class="action-btn" style="background:#f59e0b;" onclick="markSpam(${m.id})">סמן כ-SPAM</button>
         <button class="delete-btn" onclick="dismissWhatsapp(${m.id})">התעלם</button>
       </div>
-    </li>
-  `).join('');
+    </li>`;
+  }).join('');
 }
 
 function addWhatsappMessage(from, text) {

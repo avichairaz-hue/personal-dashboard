@@ -30,6 +30,7 @@ const INITIAL_CONTAINERS = [
     id: 2001,
     company: "OOCL",
     number: "CSNU8366233",
+    note: "",
     status: "בדרך לאשדוד",
     eta: "25 בנובמבר 2026",
     vessel: "IONIA",
@@ -45,6 +46,9 @@ const TRACKING_API = 'https://terminal49-api-key-request.vercel.app/api/track';
 let tasks = JSON.parse(localStorage.getItem('tasks') || 'null') || INITIAL_TASKS;
 let ideas = JSON.parse(localStorage.getItem('ideas') || 'null') || INITIAL_IDEAS;
 let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INITIAL_CONTAINERS;
+
+// ודא שלכל מכולה יש note
+containers.forEach(c => { if (c.note === undefined) c.note = ''; });
 
 if (containers.length === 0) {
   containers = INITIAL_CONTAINERS;
@@ -191,11 +195,13 @@ async function manualCheckAll() {
 function addContainer() {
   const company = document.getElementById('companyInput').value.trim();
   const number = document.getElementById('containerInput').value.trim();
+  const note = document.getElementById('noteInput')?.value.trim() || '';
   if (!company || !number) return alert('הזן חברת ספנות ומספר מכולה');
   containers.unshift({
     id: Date.now(),
     company,
     number,
+    note,
     status: 'ממתין לבדיקה',
     eta: 'לא ידוע',
     vessel: '',
@@ -207,12 +213,21 @@ function addContainer() {
   renderContainers();
   document.getElementById('companyInput').value = '';
   document.getElementById('containerInput').value = '';
+  if (document.getElementById('noteInput')) document.getElementById('noteInput').value = '';
 }
 
 function deleteContainer(id) {
   containers = containers.filter(c => c.id !== id);
   saveContainers();
   renderContainers();
+}
+
+function updateNote(id, value) {
+  const c = containers.find(x => x.id === id);
+  if (c) {
+    c.note = value;
+    saveContainers();
+  }
 }
 
 function renderContainers() {
@@ -223,7 +238,14 @@ function renderContainers() {
         <strong>${escapeHtml(c.company)}</strong> — ${escapeHtml(c.number)}
         <button class="delete-btn" onclick="deleteContainer(${c.id})">מחק</button>
       </div>
-      <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.4rem; line-height: 1.5;">
+      <div style="margin: 0.4rem 0;">
+        <input type="text" 
+          value="${escapeHtml(c.note || '')}" 
+          placeholder="הערה / זיהוי המשלוח (למשל: לקוח X / הזמנה 123)"
+          onchange="updateNote(${c.id}, this.value)"
+          style="width: 100%; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #f8fafc; font-size: 0.9rem;">
+      </div>
+      <div style="font-size: 0.9rem; color: #cbd5e1; margin-top: 0.3rem; line-height: 1.5;">
         <strong>סטטוס:</strong> ${escapeHtml(c.status || 'לא ידוע')}<br>
         <strong>מועד געה משוער לאשדוד:</strong> ${escapeHtml(c.eta || 'לא ידוע')}<br>
         ${c.vessel ? `<strong>אונייה:</strong> ${escapeHtml(c.vessel)}<br>` : ''}

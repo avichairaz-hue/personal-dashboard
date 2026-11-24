@@ -50,6 +50,7 @@ let containers = JSON.parse(localStorage.getItem('containers') || 'null') || INI
 let whatsappMessages = JSON.parse(localStorage.getItem('whatsappMessages') || '[]');
 let spamList = JSON.parse(localStorage.getItem('spamList') || '[]');
 let importantSenders = JSON.parse(localStorage.getItem('importantSenders') || '[]');
+let dismissedKeys = JSON.parse(localStorage.getItem('dismissedKeys') || '[]');
 
 containers.forEach(c => { if (c.note === undefined) c.note = ''; });
 
@@ -65,11 +66,6 @@ renderTasks();
 renderIdeas();
 renderContainers();
 renderWhatsapp();
-
-// בדיקה אוטומטית כל 2 דקות
-setInterval(fetchWhatsappMessages, 2 * 60 * 1000);
-// בדיקה ראשונה אחרי טעינה
-setTimeout(fetchWhatsappMessages, 3000);
 
 // === משימות ===
 function addTask() {
@@ -158,6 +154,10 @@ function renderIdeas() {
 function saveIdeas() { localStorage.setItem('ideas', JSON.stringify(ideas)); }
 
 // === WhatsApp ===
+function msgKey(msg) {
+  return (msg.from || '') + '|' + (msg.text || '');
+}
+
 function isSpam(msg) {
   const text = (msg.text || '').toLowerCase();
   const from = (msg.from || '').toLowerCase();
@@ -178,6 +178,8 @@ function markSpam(id) {
   if (keyword && keyword.trim()) {
     spamList.push(keyword.trim());
     localStorage.setItem('spamList', JSON.stringify(spamList));
+    dismissedKeys.push(msgKey(msg));
+    localStorage.setItem('dismissedKeys', JSON.stringify(dismissedKeys));
     whatsappMessages = whatsappMessages.filter(m => m.id !== id);
     localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
     renderWhatsapp();
@@ -185,6 +187,11 @@ function markSpam(id) {
 }
 
 function dismissWhatsapp(id) {
+  const msg = whatsappMessages.find(m => m.id === id);
+  if (msg) {
+    dismissedKeys.push(msgKey(msg));
+    localStorage.setItem('dismissedKeys', JSON.stringify(dismissedKeys));
+  }
   whatsappMessages = whatsappMessages.filter(m => m.id !== id);
   localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
   renderWhatsapp();
@@ -193,16 +200,19 @@ function dismissWhatsapp(id) {
 function convertToTask(id) {
   const msg = whatsappMessages.find(m => m.id === id);
   if (!msg) return;
-  // למד שהשולח חשוב
   if (msg.from && !importantSenders.includes(msg.from)) {
     importantSenders.push(msg.from);
     localStorage.setItem('importantSenders', JSON.stringify(importantSenders));
   }
+  dismissedKeys.push(msgKey(msg));
+  localStorage.setItem('dismissedKeys', JSON.stringify(dismissedKeys));
   const text = `💬 WhatsApp מ-${msg.from || 'לא ידוע'}: ${msg.text || ''}`;
   tasks.unshift({ id: Date.now(), text, done: false });
   saveTasks();
   renderTasks();
-  dismissWhatsapp(id);
+  whatsappMessages = whatsappMessages.filter(m => m.id !== id);
+  localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
+  renderWhatsapp();
 }
 
 function clearSpam() {
@@ -214,18 +224,21 @@ function clearSpam() {
 }
 
 async function fetchWhatsappMessages() {
+  const btn = document.getElementById('fetchWhatsappBtn');
+  if (btn) btn.textContent = 'בודק...';
   try {
     const res = await fetch(WHATSAPP_API);
     const data = await res.json();
     if (data.messages && Array.isArray(data.messages)) {
       let added = 0;
       data.messages.forEach(m => {
-        if (!whatsappMessages.some(existing => existing.from === m.from && existing.text === m.text)) {
-          const msg = { id: Date.now() + Math.random(), from: m.from, text: m.text, time: new Date().toLocaleString('he-IL') };
-          if (!isSpam(msg)) {
-            whatsappMessages.unshift(msg);
-            added++;
-          }
+        const key = msgKey(m);
+        if (dismissedKeys.includes(key)) return;
+        if (whatsappMessages.some(existing => msgKey(existing) === key)) return;
+        const msg = { id: Date.now() + Math.random(), from: m.from, text: m.text, time: new Date().toLocaleString('he-IL') };
+        if (!isSpam(msg)) {
+          whatsappMessages.unshift(msg);
+          added++;
         }
       });
       if (added > 0) {
@@ -235,7 +248,9 @@ async function fetchWhatsappMessages() {
     }
   } catch (e) {
     console.error('WhatsApp fetch failed', e);
+    alert('לא הצלחתי למשוך הודעות');
   }
+  if (btn) btn.textContent = 'בדוק הודעות חדשות';
 }
 
 function renderWhatsapp() {
@@ -274,7 +289,7 @@ function addWhatsappMessage(from, text) {
     text,
     time: new Date().toLocaleString('he-IL')
   };
-  if (!isSpam(msg)) {
+  if (!isSpam(msg) && !dismissedKeys.includes(msgKey(msg))) {
     whatsappMessages.unshift(msg);
     localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
     renderWhatsapp();

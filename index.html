@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>הדשבורד שלי</title>
   <link rel="stylesheet" href="style.css">
+  <style>
+    table { width: 100%; border-collapse: collapse; margin-top: 0.75rem; font-size: 0.9rem; }
+    th, td { padding: 0.6rem 0.5rem; text-align: right; border-bottom: 1px solid #334155; }
+    th { background: #1e293b; color: #94a3b8; font-weight: 600; }
+    tr:hover { background: #1e293b; }
+    .note-input { width: 100%; padding: 0.3rem 0.4rem; border-radius: 4px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; font-size: 0.85rem; }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -71,8 +78,8 @@
       <div style="margin: 0.75rem 0;">
         <button onclick="manualCheckAll()" style="background:#10b981;">בדוק עכשיו את כל המכולות</button>
       </div>
-      <ul id="containerList" class="list"></ul>
-      <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 1rem;">בדיקה אוטומטית 3 פעמים ביום + בדיקה יזומה בכפתור. סטטוס מתעדכן לאחר בדיקה.</p>
+      <div id="containerTable"></div>
+      <p style="font-size: 0.85rem; color: #94a3b8; margin-top: 1rem;">ממוין לפי מועד געה קרוב. בדיקה יזומה בכפתור.</p>
     </section>
 
     <footer>

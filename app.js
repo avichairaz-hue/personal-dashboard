@@ -33,6 +33,7 @@ const INITIAL_CONTAINERS = [
     note: "",
     status: "בדרך לאשדוד",
     eta: "25 בנובמבר 2026",
+    etaRaw: "2026-11-25",
     vessel: "IONIA",
     origin: "Xiamen (סין)",
     lastCheck: new Date().toLocaleString('he-IL'),
@@ -53,7 +54,7 @@ let importantSenders = JSON.parse(localStorage.getItem('importantSenders') || '[
 let dismissedKeys = JSON.parse(localStorage.getItem('dismissedKeys') || '[]');
 let lastCheckTime = localStorage.getItem('lastWhatsappCheck') || '1970-01-01T00:00:00.000Z';
 
-containers.forEach(c => { if (c.note === undefined) c.note = ''; });
+containers.forEach(c => { if (c.note === undefined) c.note = ''; if (!c.etaRaw) c.etaRaw = ''; });
 
 if (containers.length === 0) {
   containers = INITIAL_CONTAINERS;
@@ -237,7 +238,6 @@ async function fetchWhatsappMessages() {
         const key = msgKey(m);
         if (dismissedKeys.includes(key)) return;
         if (whatsappMessages.some(existing => msgKey(existing) === key)) return;
-        // רק הודעות חדשות מהבדיקה האחרונה
         const msgTime = m.time ? new Date(m.time).getTime() : Date.now();
         if (msgTime <= cutoff) return;
         const msg = { id: Date.now() + Math.random(), from: m.from, text: m.text, time: new Date().toLocaleString('he-IL') };
@@ -246,7 +246,6 @@ async function fetchWhatsappMessages() {
           added++;
         }
       });
-      // עדכן זמן בדיקה אחרונה
       lastCheckTime = new Date().toISOString();
       localStorage.setItem('lastWhatsappCheck', lastCheckTime);
       if (added > 0) {
@@ -316,6 +315,7 @@ async function checkContainer(container) {
     if (data.shipment) {
       container.status = data.shipment.destination === 'Ashdod' ? 'בדרך לאשדוד' : (data.status || 'במעקב');
       container.eta = data.shipment.etaAt ? new Date(data.shipment.etaAt).toLocaleDateString('he-IL') : 'לא ידוע';
+      container.etaRaw = data.shipment.etaAt || '';
       container.vessel = data.shipment.vessel || '';
       container.origin = data.shipment.origin || '';
       container.source = 'Terminal49';
@@ -362,6 +362,7 @@ function addContainer() {
     note,
     status: 'ממתין לבדיקה',
     eta: 'לא ידוע',
+    etaRaw: '',
     vessel: '',
     origin: '',
     lastCheck: null,
@@ -385,35 +386,58 @@ function updateNote(id, value) {
   if (c) {
     c.note = value;
     saveContainers();
-    renderContainers();
   }
 }
 
+function parseEta(etaRaw, etaDisplay) {
+  if (etaRaw) {
+    const d = new Date(etaRaw);
+    if (!isNaN(d)) return d.getTime();
+  }
+  return Infinity;
+}
+
 function renderContainers() {
-  const list = document.getElementById('containerList');
-  list.innerHTML = containers.map(c => `
-    <li>
-      <div class="idea-header">
-        <strong>${escapeHtml(c.company)}</strong> — ${escapeHtml(c.number)}
-        <button class="delete-btn" onclick="deleteContainer(${c.id})">מחק</button>
-      </div>
-      ${c.note ? `<div style="font-weight: 600; color: #38bdf8; margin: 0.35rem 0 0.2rem; font-size: 1rem;">📝 ${escapeHtml(c.note)}</div>` : ''}
-      <div style="margin: 0.3rem 0 0.5rem;">
-        <input type="text" 
-          value="${escapeHtml(c.note || '')}" 
-          placeholder="הוסף הערה / זיהוי למשלוח..."
-          onchange="updateNote(${c.id}, this.value)"
-          style="width: 100%; padding: 0.4rem 0.6rem; border-radius: 6px; border: 1px solid #475569; background: #1e293b; color: #f8fafc; font-size: 0.9rem;">
-      </div>
-      <div style="font-size: 0.9rem; color: #cbd5e1; line-height: 1.5;">
-        <strong>סטטוס:</strong> ${escapeHtml(c.status || 'לא ידוע')}<br>
-        <strong>מועד געה משוער לאשדוד:</strong> ${escapeHtml(c.eta || 'לא ידוע')}<br>
-        ${c.vessel ? `<strong>אונייה:</strong> ${escapeHtml(c.vessel)}<br>` : ''}
-        ${c.origin ? `<strong>נמל יציאה:</strong> ${escapeHtml(c.origin)}<br>` : ''}
-        ${c.lastCheck ? `<span style="color:#94a3b8;">בדיקה אחרונה: ${escapeHtml(c.lastCheck)} ${c.source ? '(' + escapeHtml(c.source) + ')' : ''}</span>` : ''}
-      </div>
-    </li>
-  `).join('');
+  const container = document.getElementById('containerTable');
+  if (!container) return;
+
+  const sorted = [...containers].sort((a, b) => parseEta(a.etaRaw, a.eta) - parseEta(b.etaRaw, b.eta));
+
+  if (sorted.length === 0) {
+    container.innerHTML = '<p style="color:#94a3b8;">אין מכולות</p>';
+    return;
+  }
+
+  container.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>חברה</th>
+          <th>מספר מכולה</th>
+          <th>הערה</th>
+          <th>סטטוס</th>
+          <th>מועד געה</th>
+          <th>אונייה</th>
+          <th>נמל יציאה</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sorted.map(c => `
+          <tr>
+            <td><strong>${escapeHtml(c.company)}</strong></td>
+            <td>${escapeHtml(c.number)}</td>
+            <td><input class="note-input" value="${escapeHtml(c.note || '')}" placeholder="הערה..." onchange="updateNote(${c.id}, this.value)"></td>
+            <td>${escapeHtml(c.status || '')}</td>
+            <td>${escapeHtml(c.eta || 'לא ידוע')}</td>
+            <td>${escapeHtml(c.vessel || '')}</td>
+            <td>${escapeHtml(c.origin || '')}</td>
+            <td><button class="delete-btn" onclick="deleteContainer(${c.id})">מחק</button></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
 }
 
 function saveContainers() { localStorage.setItem('containers', JSON.stringify(containers)); }

@@ -51,6 +51,7 @@ let whatsappMessages = JSON.parse(localStorage.getItem('whatsappMessages') || '[
 let spamList = JSON.parse(localStorage.getItem('spamList') || '[]');
 let importantSenders = JSON.parse(localStorage.getItem('importantSenders') || '[]');
 let dismissedKeys = JSON.parse(localStorage.getItem('dismissedKeys') || '[]');
+let lastCheckTime = localStorage.getItem('lastWhatsappCheck') || '1970-01-01T00:00:00.000Z';
 
 containers.forEach(c => { if (c.note === undefined) c.note = ''; });
 
@@ -230,19 +231,28 @@ async function fetchWhatsappMessages() {
     const res = await fetch(WHATSAPP_API);
     const data = await res.json();
     if (data.messages && Array.isArray(data.messages)) {
+      const cutoff = new Date(lastCheckTime).getTime();
       let added = 0;
       data.messages.forEach(m => {
         const key = msgKey(m);
         if (dismissedKeys.includes(key)) return;
         if (whatsappMessages.some(existing => msgKey(existing) === key)) return;
+        // רק הודעות חדשות מהבדיקה האחרונה
+        const msgTime = m.time ? new Date(m.time).getTime() : Date.now();
+        if (msgTime <= cutoff) return;
         const msg = { id: Date.now() + Math.random(), from: m.from, text: m.text, time: new Date().toLocaleString('he-IL') };
         if (!isSpam(msg)) {
           whatsappMessages.unshift(msg);
           added++;
         }
       });
+      // עדכן זמן בדיקה אחרונה
+      lastCheckTime = new Date().toISOString();
+      localStorage.setItem('lastWhatsappCheck', lastCheckTime);
       if (added > 0) {
         localStorage.setItem('whatsappMessages', JSON.stringify(whatsappMessages));
+        renderWhatsapp();
+      } else {
         renderWhatsapp();
       }
     }

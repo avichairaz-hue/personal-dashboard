@@ -33,7 +33,7 @@ const INITIAL_CONTAINERS = [
     note: "",
     status: "בדרך לאשדוד",
     eta: "25 בנובמבר 2026",
-    etaRaw: "2026-11-25",
+    etaRaw: "2026-11-25T00:00:00.000Z",
     vessel: "IONIA",
     origin: "Xiamen (סין)",
     lastCheck: new Date().toLocaleString('he-IL'),
@@ -389,10 +389,10 @@ function updateNote(id, value) {
   }
 }
 
-function parseEta(etaRaw, etaDisplay) {
-  if (etaRaw) {
-    const d = new Date(etaRaw);
-    if (!isNaN(d)) return d.getTime();
+function parseEta(c) {
+  if (c.etaRaw) {
+    const d = new Date(c.etaRaw);
+    if (!isNaN(d.getTime())) return d.getTime();
   }
   return Infinity;
 }
@@ -401,7 +401,8 @@ function renderContainers() {
   const container = document.getElementById('containerTable');
   if (!container) return;
 
-  const sorted = [...containers].sort((a, b) => parseEta(a.etaRaw, a.eta) - parseEta(b.etaRaw, b.eta));
+  // מיון: הקרוב ביותר ראשון
+  const sorted = [...containers].sort((a, b) => parseEta(a) - parseEta(b));
 
   if (sorted.length === 0) {
     container.innerHTML = '<p style="color:#94a3b8;">אין מכולות</p>';
